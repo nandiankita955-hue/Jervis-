@@ -24,7 +24,6 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 
 import { HardwareTab } from "./components/HardwareTab";
-import { AndroidSpecTab } from "./components/AndroidSpecTab";
 import { SettingsTab } from "./components/SettingsTab";
 import { JervisMemory } from "./types";
 
@@ -174,7 +173,7 @@ export default function App() {
   const [shieldActive, setShieldActive] = useState(false);
   const [reactorOverdrive, setReactorOverdrive] = useState(false);
   const [diagnosticProgress, setDiagnosticProgress] = useState<number | null>(null);
-  const [selectedActionTab, setSelectedActionTab] = useState<'diagnostics' | 'hardware' | 'android_spec' | 'settings'>('diagnostics');
+  const [selectedActionTab, setSelectedActionTab] = useState<'diagnostics' | 'hardware' | 'settings'>('diagnostics');
 
   // Security and custom settings states
   const [appUnlocked, setAppUnlocked] = useState(false);
@@ -936,7 +935,7 @@ export default function App() {
              parts: [{ text: m.text }]
            }));
 
-           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${savedApiKey}`, {
+           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${savedApiKey}`, {
              method: "POST",
              headers: { "Content-Type": "application/json" },
              body: JSON.stringify({
@@ -1353,7 +1352,7 @@ export default function App() {
 
           {/* Subsystem Multi-Tab diagnostics */}
           <div className="bg-[#091122]/90 border border-[#14325c]/60 rounded-xl p-5 flex-1 flex flex-col justify-between shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
-            <div className="grid grid-cols-4 gap-1.5 border-b border-[#14325c]/60 mb-4 pb-2 text-[10px]">
+            <div className="grid grid-cols-3 gap-1.5 border-b border-[#14325c]/60 mb-4 pb-2 text-[10px]">
               <button 
                 onClick={() => { setSelectedActionTab('diagnostics'); jervisSynth.playBeep(900, "sine", 0.05, 0.02); }}
                 className={`px-1 py-1.5 rounded font-bold tracking-wider uppercase text-center transition-all ${selectedActionTab === 'diagnostics' ? 'text-[#3bc0ff] bg-[#112347] border border-[#3bc0ff]/20' : 'text-[#536b94] hover:text-[#8ba7d4] border border-transparent'}`}
@@ -1365,12 +1364,6 @@ export default function App() {
                 className={`px-1 py-1.5 rounded font-bold tracking-wider uppercase text-center transition-all ${selectedActionTab === 'hardware' ? 'text-[#3bc0ff] bg-[#112347] border border-[#3bc0ff]/20' : 'text-[#536b94] hover:text-[#8ba7d4] border border-transparent'}`}
               >
                 Device HUD
-              </button>
-              <button 
-                onClick={() => { setSelectedActionTab('android_spec'); jervisSynth.playBeep(900, "sine", 0.05, 0.02); }}
-                className={`px-1 py-1.5 rounded font-bold tracking-wider uppercase text-center transition-all ${selectedActionTab === 'android_spec' ? 'text-[#3bc0ff] bg-[#112347] border border-[#3bc0ff]/20' : 'text-[#536b94] hover:text-[#8ba7d4] border border-transparent'}`}
-              >
-                Android Core
               </button>
               <button 
                 onClick={() => { setSelectedActionTab('settings'); jervisSynth.playBeep(900, "sine", 0.05, 0.02); }}
@@ -1519,21 +1512,6 @@ export default function App() {
                   </motion.div>
                 )}
 
-                {selectedActionTab === "android_spec" && (
-                  <motion.div 
-                    key="android_spec"
-                    initial={{ opacity: 0, x: -5 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="w-full"
-                  >
-                    <AndroidSpecTab 
-                      addLog={addLog}
-                      playBeep={(freq, type, duration, gainValue) => jervisSynth.playBeep(freq, type, duration, gainValue)}
-                      playConfirm={() => jervisSynth.playConfirm()}
-                    />
-                  </motion.div>
-                )}
 
                 {selectedActionTab === "settings" && (
                   <SettingsTab 

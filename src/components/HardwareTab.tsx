@@ -60,15 +60,6 @@ export const HardwareTab: React.FC<HardwareTabProps> = ({
   const [freeStorage, setFreeStorage] = useState<string>("103.5 GB");
   const [storagePercent, setStoragePercent] = useState<number>(19);
 
-  // Hardware states
-  const [brightness, setBrightness] = useState<number>(75);
-  const [volume, setVolume] = useState<number>(60);
-  const [rotationLocked, setRotationLocked] = useState<boolean>(false);
-  const [wifiOn, setWifiOn] = useState<boolean>(true);
-  const [bluetoothOn, setBluetoothOn] = useState<boolean>(false);
-  const [airplaneMode, setAirplaneMode] = useState<boolean>(false);
-  const [hotspotOn, setHotspotOn] = useState<boolean>(false);
-
   // Location stats
   const [latitude, setLatitude] = useState<string>("Searching...");
   const [longitude, setLongitude] = useState<string>("Searching...");
@@ -291,93 +282,20 @@ export const HardwareTab: React.FC<HardwareTabProps> = ({
         </div>
       </div>
 
-      {/* Main Settings Control Panel */}
+      {/* Core Hardware Controllers */}
       <div className="p-3 rounded-lg border border-[#1d4c8c]/50 bg-[#071329]/80 space-y-3">
         <div className="font-bold text-[#3bc0ff] uppercase tracking-wide text-[10px] flex items-center gap-1">
           <Smartphone className="h-3.5 w-3.5" />
-          Hardware & System Regulators
+          Hardware Control
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {/* Sliders */}
-          <div className="space-y-2">
-            <div>
-              <div className="flex justify-between text-[9px] font-bold text-[#5e7ea8] uppercase mb-1">
-                <span className="flex items-center gap-1"><Volume2 className="h-3 w-3" /> System Volume</span>
-                <span className="text-white">{volume}%</span>
-              </div>
-              <input 
-                type="range" 
-                min="0" max="100" 
-                value={volume}
-                onChange={(e) => {
-                  setVolume(Number(e.target.value));
-                  playBeep(440 + Number(e.target.value) * 3, "sine", 0.04, 0.01);
-                }}
-                className="w-full h-1 bg-[#050b16] rounded-lg appearance-none cursor-pointer accent-[#3bc0ff]"
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between text-[9px] font-bold text-[#5e7ea8] uppercase mb-1">
-                <span className="flex items-center gap-1"><Sun className="h-3 w-3" /> Screen Lumens</span>
-                <span className="text-white">{brightness}%</span>
-              </div>
-              <input 
-                type="range" 
-                min="10" max="100" 
-                value={brightness}
-                onChange={(e) => {
-                  setBrightness(Number(e.target.value));
-                  addLog(`Holographic brightness adjusted to ${e.target.value}%`, "info");
-                }}
-                className="w-full h-1 bg-[#050b16] rounded-lg appearance-none cursor-pointer accent-[#00ffcc]"
-              />
-            </div>
-          </div>
-
-          {/* Quick Toggles */}
-          <div className="grid grid-cols-2 gap-1.5 text-[9px] font-bold uppercase">
-            <button
-              onClick={() => {
-                const state = !wifiOn;
-                setWifiOn(state);
-                addLog(`Wi-Fi transceiver grid: ${state ? "ENGAGED" : "SHUTDOWN"}`, state ? "success" : "warn");
-                playBeep(600, "sine", 0.05, 0.02);
-              }}
-              className={`p-1.5 rounded border flex items-center gap-1 transition-all ${wifiOn ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40" : "bg-[#0b172e] text-[#5e7ea8] border-[#1d4c8c]"}`}
-            >
-              <Wifi className="h-3 w-3" /> Wi-Fi
-            </button>
-            <button
-              onClick={() => {
-                const state = !bluetoothOn;
-                setBluetoothOn(state);
-                addLog(`Bluetooth telemetry bridge: ${state ? "ONLINE" : "OFFLINE"}`, state ? "success" : "warn");
-                playBeep(600, "sine", 0.05, 0.02);
-              }}
-              className={`p-1.5 rounded border flex items-center gap-1 transition-all ${bluetoothOn ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40" : "bg-[#0b172e] text-[#5e7ea8] border-[#1d4c8c]"}`}
-            >
-              <Bluetooth className="h-3 w-3" /> BT Link
-            </button>
-            <button
-              onClick={() => {
-                const state = !rotationLocked;
-                setRotationLocked(state);
-                addLog(`Screen Rotation lock: ${state ? "ENABLED" : "AUTO-ROTATE"}`, "info");
-                playBeep(600, "sine", 0.05, 0.02);
-              }}
-              className={`p-1.5 rounded border flex items-center gap-1 transition-all ${rotationLocked ? "bg-[#112447] text-[#3bc0ff] border-[#3bc0ff]/40" : "bg-[#0b172e] text-[#5e7ea8] border-[#1d4c8c]"}`}
-            >
-              <RotateCw className="h-3 w-3" /> Rotation
-            </button>
-            <button
-              onClick={() => toggleFlashlight()}
-              className={`p-1.5 rounded border flex items-center gap-1 transition-all ${flashlightOn ? "bg-amber-500/15 text-amber-400 border-amber-500/40" : "bg-[#0b172e] text-[#5e7ea8] border-[#1d4c8c]"}`}
-            >
-              <Zap className="h-3 w-3" /> Torch
-            </button>
-          </div>
+          <button
+            onClick={() => toggleFlashlight()}
+            className={`p-2 rounded border flex items-center justify-center gap-2 transition-all ${flashlightOn ? "bg-amber-500/15 text-amber-400 border-amber-500/40" : "bg-[#0b172e] text-[#5e7ea8] border-[#1d4c8c]"}`}
+          >
+            <Zap className="h-4 w-4" /> {flashlightOn ? "Torch On" : "Torch Off"}
+          </button>
         </div>
       </div>
 
