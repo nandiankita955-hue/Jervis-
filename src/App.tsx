@@ -22,6 +22,8 @@ import {
   Monitor
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Capacitor } from "@capacitor/core";
+import { SpeechRecognition as CapSpeechRecognition } from "@capacitor-community/speech-recognition";
 
 import { HardwareTab } from "./components/HardwareTab";
 import { SettingsTab } from "./components/SettingsTab";
@@ -388,15 +390,16 @@ export default function App() {
       };
 
       rec.onerror = (event: any) => {
-        console.error("Speech Recognition Error", event);
+        const errType = event.error || "unknown";
+        console.warn("Speech Recognition Error", errType);
         setIsListening(false);
         isListeningRef.current = false;
         setTranscript("");
         
         const quietErrors = ["aborted", "no-speech"];
-        const criticalErrors = ["not-allowed", "service-not-allowed", "language-not-supported"];
+        const criticalErrors = ["not-allowed", "service-not-allowed", "language-not-supported", "unknown"];
 
-        if (criticalErrors.includes(event.error)) {
+        if (criticalErrors.includes(errType)) {
           // Disable continuous listening immediately for permission or support issues to avoid tight error/watchdog loop
           setMemory((prev: any) => ({
             ...prev,
@@ -406,14 +409,14 @@ export default function App() {
             }
           }));
           jervisSynth.playAlert();
-          addLog(`Voice protocol HALTED: Microphone permission or speech recognition is disabled or unsupported (${event.error}). Please allow permissions, Sir.`, "error");
+          addLog(`Voice protocol HALTED: Microphone permission or speech recognition is disabled or unsupported (${errType}). Please allow permissions, Sir.`, "error");
           return;
         }
 
-        if (!quietErrors.includes(event.error)) {
+        if (!quietErrors.includes(errType)) {
           consecutiveSpeechErrorsRef.current += 1;
           jervisSynth.playAlert();
-          addLog(`Voice input anomaly: ${event.error}`, "error");
+          addLog(`Voice input anomaly: ${errType}`, "error");
 
           // Safe protective trigger: halt continuous stream if too many consecutive failures occur
           if (consecutiveSpeechErrorsRef.current >= 3) {
