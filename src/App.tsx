@@ -825,7 +825,51 @@ export default function App() {
       return true;
     }
 
-    // 6. Reset Screen
+    // 6. Generic App Launcher
+    const openMatch = cmd.match(/open (.*)/) || cmd.match(/launch (.*)/) || cmd.match(/(.*) kholo/) || cmd.match(/(.*) খোলো/);
+    if (openMatch && !cmd.includes("whatsapp")) { // Handled separately
+      const appName = openMatch[1].trim().toLowerCase();
+      
+      let intentUrl = `https://www.google.com/search?q=${appName}`;
+      if (appName.includes("youtube")) intentUrl = "https://www.youtube.com";
+      else if (appName.includes("facebook")) intentUrl = "https://www.facebook.com";
+      else if (appName.includes("instagram")) intentUrl = "https://www.instagram.com";
+      else if (appName.includes("map")) intentUrl = "https://maps.google.com";
+      else if (appName.includes("camera") || appName.includes("ক্যামেরা")) intentUrl = "intent://#Intent;action=android.media.action.IMAGE_CAPTURE;end;";
+      else if (appName.includes("chrome") || appName.includes("browser")) intentUrl = "intent://#Intent;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;scheme=https;end;";
+
+      window.open(intentUrl, "_blank");
+      
+      const reply = `Launching ${appName}, Sir.`;
+      setMessages(prev => [...prev, {
+        sender: "jervis",
+        text: reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+      speakResponse(reply);
+      return true;
+    }
+
+    // 7. App Exit
+    if (cmd.includes("close app") || cmd.includes("bondho koro") || cmd.includes("exit app") || cmd.includes("বন্ধ করো") || cmd.includes("shutdown") || cmd.includes("shut down")) {
+      const reply = `Shutting down main interface, Sir. Goodbye.`;
+      setMessages(prev => [...prev, {
+        sender: "jervis",
+        text: reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+      speakResponse(reply);
+      setTimeout(() => {
+        if (Capacitor.isNative) {
+          import("@capacitor/app").then(({ App }) => App.exitApp());
+        } else {
+          window.close();
+        }
+      }, 2000);
+      return true;
+    }
+
+    // 8. Reset Screen
     if (cmd.includes("clear console") || cmd.includes("clear memory") || cmd.includes("reset screen") || cmd.includes("ক্লিয়ার")) {
       setMessages([{
         sender: "jervis",
