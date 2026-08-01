@@ -698,17 +698,17 @@ export default function App() {
     const targetNum = num || waNumber;
     const msg = messageText || waMessage;
 
-    if (!targetNum || !targetNum.trim()) {
-      addLog("Communications protocol abort: Target contact is blank.", "error");
-      jervisSynth.playAlert();
-      return;
-    }
-
     // Sanitize number - remove any spaces or non-digit characters
-    const cleanNum = targetNum.replace(/\D/g, "");
-    const waUrl = `https://api.whatsapp.com/send?phone=${cleanNum}&text=${encodeURIComponent(msg)}`;
+    const cleanNum = targetNum ? targetNum.replace(/\D/g, "") : "";
+    const waUrl = cleanNum 
+      ? `https://api.whatsapp.com/send?phone=${cleanNum}&text=${encodeURIComponent(msg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
     
-    addLog(`Establishing secure WhatsApp gateway stream to: +${cleanNum}`, "success");
+    if (cleanNum) {
+      addLog(`Establishing secure WhatsApp gateway stream to: +${cleanNum}`, "success");
+    } else {
+      addLog(`Opening WhatsApp Gateway for manual contact selection.`, "info");
+    }
     jervisSynth.playConfirm();
     
     // Deep links work natively inside Android/iOS webviews and browsers
@@ -716,7 +716,7 @@ export default function App() {
   };
 
   // Handle Jervis Actions matching specific voice triggers
-  const executeLocalAction = (commandText: string): boolean => {
+  const executeLocalAction = async (commandText: string): Promise<boolean> => {
     const cmd = commandText.toLowerCase();
 
     // 1. Flashlight Control (Support English + Bengali triggers)
@@ -761,26 +761,79 @@ export default function App() {
       cmd.includes("মেসেজ") || 
       cmd.includes("বার্তা")
     ) {
-      let phone = waNumber || "919876543210";
+      let phone = waNumber || "";
       let name = "Secure Gateway Contact";
       let msgText = waMessage || "Initiating Stark communication protocol.";
 
-      if (cmd.includes("pepper") || cmd.includes("পেপার")) {
-        phone = "919900000001";
-        name = "Pepper Potts";
-        msgText = "Sir requires your presence in the Laboratory immediately.";
-      } else if (cmd.includes("happy") || cmd.includes("হ্যাপি")) {
-        phone = "919900000002";
-        name = "Happy Hogan";
-        msgText = "Sir requires the transport vehicle pre-warmed.";
-      } else if (cmd.includes("tony") || cmd.includes("টনি")) {
-        phone = "919876543210";
-        name = "Tony Stark";
+      const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative;
+
+      if (isNative) {
+        try {
+          const { Contacts } = await import('@capgo/capacitor-contacts');
+          const permission = await Contacts.requestPermissions();
+          if (permission.contacts === 'granted') {
+            const contactsResult = await Contacts.getContacts({
+              projection: { name: true, phones: true }
+            });
+            if (contactsResult.contacts) {
+              let bestMatch = null;
+              for (const c of contactsResult.contacts) {
+                const cName = (c.name?.display || "").toLowerCase();
+                if (cName && cName.length > 2 && cmd.includes(cName)) {
+                  if (!bestMatch || cName.length > (bestMatch.name?.display?.length || 0)) {
+                    bestMatch = c;
+                  }
+                }
+              }
+
+              if (!bestMatch) {
+                for (const c of contactsResult.contacts) {
+                  const firstName = (c.name?.given || "").toLowerCase();
+                  if (firstName && firstName.length > 2 && cmd.includes(firstName)) {
+                    bestMatch = c;
+                    break;
+                  }
+                }
+              }
+
+              if (bestMatch && bestMatch.phones && bestMatch.phones.length > 0) {
+                 phone = bestMatch.phones[0].number || "";
+                 name = bestMatch.name?.display || "Contact";
+                 
+                 let tempMsg = cmd.replace(name.toLowerCase(), "").replace((bestMatch.name?.given || "").toLowerCase(), "");
+                 tempMsg = tempMsg.replace(/whatsapp|message|saying|to|ke|koro|on|send|পাঠাও|বল|bulo|বলছে/gi, "").trim();
+                 if (tempMsg.length > 0) {
+                    msgText = tempMsg;
+                 }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Contacts error", e);
+        }
+      }
+
+      if (!phone) {
+        if (cmd.includes("pepper") || cmd.includes("পেপার")) {
+          phone = "919900000001";
+          name = "Pepper Potts";
+          msgText = "Sir requires your presence in the Laboratory immediately.";
+        } else if (cmd.includes("happy") || cmd.includes("হ্যাপি")) {
+          phone = "919900000002";
+          name = "Happy Hogan";
+          msgText = "Sir requires the transport vehicle pre-warmed.";
+        } else if (cmd.includes("tony") || cmd.includes("টনি")) {
+          phone = "919876543210";
+          name = "Tony Stark";
+        }
       }
 
       openWhatsApp(phone, msgText);
       
-      const reply = `Establishing secure WhatsApp communications to ${name}, Sir. হোয়াটসঅ্যাপ কানেকশন চালু করা হচ্ছে, স্যার।`;
+      const reply = phone 
+        ? `Establishing secure WhatsApp communications to ${name}, Sir. হোয়াটসঅ্যাপ কানেকশন চালু করা হচ্ছে, স্যার।`
+        : `Opening WhatsApp Gateway. Please select a contact manually, Sir. হোয়াটসঅ্যাপ খোলা হচ্ছে।`;
+        
       setMessages(prev => [...prev, {
         sender: "jervis",
         text: reply,
@@ -993,7 +1046,7 @@ export default function App() {
     addLog(`Sent command stream: "${rawText.trim()}"`, "info");
 
     // Check if it's a local command execution
-    const isLocalCommand = executeLocalAction(rawText.trim());
+    const isLocalCommand = await executeLocalAction(rawText.trim());
     if (isLocalCommand) {
       setIsThinking(false);
       isThinkingRef.current = false;
