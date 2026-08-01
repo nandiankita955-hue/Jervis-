@@ -831,12 +831,30 @@ export default function App() {
       const appName = openMatch[1].trim().toLowerCase();
       
       let intentUrl = `https://www.google.com/search?q=${appName}`;
-      if (appName.includes("youtube")) intentUrl = "https://www.youtube.com";
-      else if (appName.includes("facebook")) intentUrl = "https://www.facebook.com";
-      else if (appName.includes("instagram")) intentUrl = "https://www.instagram.com";
-      else if (appName.includes("map")) intentUrl = "https://maps.google.com";
-      else if (appName.includes("camera") || appName.includes("ক্যামেরা")) intentUrl = "intent://#Intent;action=android.media.action.IMAGE_CAPTURE;end;";
-      else if (appName.includes("chrome") || appName.includes("browser")) intentUrl = "intent://#Intent;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;scheme=https;end;";
+      
+      const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative;
+
+      if (isNative) {
+        if (appName.includes("youtube")) intentUrl = "intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end;";
+        else if (appName.includes("facebook")) intentUrl = "intent://#Intent;package=com.facebook.katana;scheme=fb;end;";
+        else if (appName.includes("instagram")) intentUrl = "intent://#Intent;package=com.instagram.android;scheme=instagram;end;";
+        else if (appName.includes("map") || appName.includes("ম্যাপ")) intentUrl = "intent://#Intent;package=com.google.android.apps.maps;scheme=geo;end;";
+        else if (appName.includes("camera") || appName.includes("ক্যামেরা")) intentUrl = "intent://#Intent;action=android.media.action.IMAGE_CAPTURE;end;";
+        else if (appName.includes("chrome") || appName.includes("browser")) intentUrl = "intent://#Intent;package=com.android.chrome;scheme=https;end;";
+        else if (appName.includes("spotify")) intentUrl = "intent://#Intent;package=com.spotify.music;scheme=spotify;end;";
+        else if (appName.includes("play store") || appName.includes("store")) intentUrl = "intent://#Intent;package=com.android.vending;scheme=market;end;";
+        else if (appName.includes("gmail") || appName.includes("mail") || appName.includes("মেইল")) intentUrl = "intent://#Intent;package=com.google.android.gm;scheme=mailto;end;";
+        else if (appName.includes("phone") || appName.includes("call") || appName.includes("কল")) intentUrl = "intent://#Intent;action=android.intent.action.DIAL;end;";
+        else if (appName.includes("calculator") || appName.includes("ক্যালকুলেটর")) intentUrl = "intent://#Intent;package=com.google.android.calculator;end;";
+        else if (appName.includes("clock") || appName.includes("alarm") || appName.includes("অ্যালার্ম")) intentUrl = "intent://#Intent;package=com.google.android.deskclock;end;";
+      } else {
+        if (appName.includes("youtube")) intentUrl = "https://www.youtube.com";
+        else if (appName.includes("facebook")) intentUrl = "https://www.facebook.com";
+        else if (appName.includes("instagram")) intentUrl = "https://www.instagram.com";
+        else if (appName.includes("map")) intentUrl = "https://maps.google.com";
+        else if (appName.includes("spotify")) intentUrl = "https://open.spotify.com";
+        else if (appName.includes("gmail") || appName.includes("mail")) intentUrl = "https://mail.google.com";
+      }
 
       window.open(intentUrl, "_blank");
       
