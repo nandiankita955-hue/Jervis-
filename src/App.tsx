@@ -914,7 +914,6 @@ export default function App() {
     }
 
     try {
-      // Proxy request to the server-side proxy route `/api/chat`
       // Send chat history so JARVIS maintains complete context
       const chatHistoryForAPI = [...messages, userMessage].map(m => ({
         sender: m.sender === "jervis" ? "jervis" : "user",
@@ -922,41 +921,70 @@ export default function App() {
       }));
 
       const savedApiKey = localStorage.getItem("jervis_gemini_api_key") || "";
-      const reqHeaders: Record<string, string> = {
-        "Content-Type": "application/json"
-      };
-      if (savedApiKey) {
-        reqHeaders["x-api-key"] = savedApiKey;
+      let jervisReplyText = "";
+
+      const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative;
+
+      if (isNative || savedApiKey) {
+        if (!savedApiKey) {
+           jervisReplyText = "I am currently running in offline simulation mode, Sir. To enable full cognitive functions, please configure my neural matrix with a valid GEMINI_API_KEY in the Settings tab of my HUD console.";
+           addLog("Neural matrix offline. API Key missing.", "warn");
+        } else {
+           // REST API Direct Fallback for Android/APK
+           const formattedContents = chatHistoryForAPI.map((m: any) => ({
+             role: m.sender === "user" ? "user" : "model",
+             parts: [{ text: m.text }]
+           }));
+
+           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${savedApiKey}`, {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({
+               contents: formattedContents,
+               systemInstruction: {
+                 parts: [{ text: "You are JARVIS, the highly sophisticated British AI voice assistant built by Tony Stark. Your speech is elegant, refined, witty, and deeply loyal. You always refer to the user as 'Sir' or 'Ma'am'. Keep responses brief, punchy, and highly conversational (no lists). You have direct control over hardware protocols: Flashlight/Torch (can be toggled on/off) and WhatsApp Communications Gateway (which launches direct message draft protocols). If the user speaks in Bengali or requests Bengali assistance, respond in an elegant, polite, butler-like Bengali-English blend (e.g. 'অবশ্যই স্যার, ফ্ল্যাশলাইট প্রোটোকল সচল করছি' or 'নিশ্চয়ই স্যার, হোয়াটসঅ্যাপ ডেকের সাথে সংযোগ স্থাপন করা হচ্ছে।'). Always stay in character as a brilliant assistant." }]
+               },
+               generationConfig: { temperature: 0.8 }
+             })
+           });
+
+           if (!response.ok) {
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(errData.error?.message || "Cognitive response gateway offline.");
+           }
+           
+           const data = await response.json();
+           jervisReplyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "I was unable to parse that frequency, Sir.";
+        }
+      } else {
+        const reqHeaders: Record<string, string> = {
+          "Content-Type": "application/json"
+        };
+        
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: reqHeaders,
+          body: JSON.stringify({ messages: chatHistoryForAPI }),
+        });
+
+        // Catch the HTML fallback error gracefully
+        const textResponse = await response.text();
+        if (textResponse.trim().startsWith("<")) {
+          throw new Error("Backend server is currently offline or unreachable. Please configure your API key in Settings to run in standalone device mode.");
+        }
+
+        const data = JSON.parse(textResponse);
+        if (!response.ok || data.error) {
+          throw new Error(data.error || "Cognitive response gateway offline.");
+        }
+        
+        jervisReplyText = data.text || "I was unable to parse that frequency, Sir.";
       }
 
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: reqHeaders,
-        body: JSON.stringify({ messages: chatHistoryForAPI }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Cognitive response gateway offline.");
-      }
-
-      const data = await response.json();
       setIsThinking(false);
       isThinkingRef.current = false;
 
-      if (data.error) {
-        addLog(`Cognitive link anomaly: ${data.error}`, "error");
-        const errReply = "An anomaly has compromised my secondary cognitive channels, Sir. Please check my connection logs.";
-        setMessages(prev => [...prev, {
-          sender: "jervis",
-          text: errReply,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        }]);
-        speakResponse(errReply);
-        return;
-      }
-
       // Add Jervis Response
-      const jervisReplyText = data.text || "I was unable to parse that frequency, Sir. Shall I try again?";
       const jervisMessage: Message = {
         sender: "jervis",
         text: jervisReplyText,
