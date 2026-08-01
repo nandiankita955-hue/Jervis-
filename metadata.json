@@ -1,0 +1,6 @@
+{
+  "name": "Jervis AI Assistant",
+  "description": "An immersive, voice-controlled cybernetic companion based on JARVIS, complete with real-time vocal response synthesis, full-stack Gemini intelligence, diagnostic systems, and responsive touch controls.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
