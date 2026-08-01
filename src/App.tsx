@@ -351,9 +351,10 @@ export default function App() {
   // Initialize Speech Synthesis and Speech Recognition
   useEffect(() => {
     const initSpeech = async () => {
+      const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative;
       // For WebView/Native environments, ensure we request microphone permission first
       try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        if (!isNative && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           stream.getTracks().forEach(track => track.stop()); // close immediately after granted
         }
@@ -362,7 +363,6 @@ export default function App() {
       }
 
       // Check speech recognition
-      const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative;
       const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       
       let rec: any = null;
@@ -463,7 +463,9 @@ export default function App() {
     }
 
     // Check speech synthesis & select classy British voice if possible
-    if (typeof window !== "undefined" && window.speechSynthesis) {
+    if (isNative) {
+      setSpeechSynthesisSupported(true);
+    } else if (typeof window !== "undefined" && window.speechSynthesis) {
       const getVoices = () => {
         const voices = window.speechSynthesis.getVoices();
         // Look for British male voice (JARVIS style)
@@ -535,11 +537,15 @@ export default function App() {
   };
 
   // Speaks out responses using SpeechSynthesis
-  const speakResponse = (text: string) => {
+  const speakResponse = async (text: string) => {
     if (isMuted || !speechSynthesisSupported) return;
     try {
-      window.speechSynthesis.cancel(); // Stop any active speech
+      const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative;
       
+      if (!isNative) {
+        window.speechSynthesis.cancel(); // Stop any active speech
+      }
+
       // Abort active recognition immediately so JARVIS doesn't listen to his own speech output
       if (recognitionRef.current) {
         try {
@@ -550,27 +556,42 @@ export default function App() {
       // Clean up text slightly to speak better (remove markdown asterisks)
       const cleanText = text.replace(/\*/g, "").replace(/`/g, "").trim();
       
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      if (jervisVoice) {
-        utterance.voice = jervisVoice;
-      }
-      utterance.pitch = 0.95; // Slightly lower pitch for classy tone
-      utterance.rate = 1.05;  // Classy butler speed
-
-      utterance.onstart = () => {
+      if (isNative) {
         setIsSpeaking(true);
         isSpeakingRef.current = true;
-      };
-      utterance.onend = () => {
+        const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
+        await TextToSpeech.speak({
+          text: cleanText,
+          lang: memory.userPrefs?.speechLang || 'en-GB',
+          rate: 1.05,
+          pitch: 0.95,
+          category: 'ambient',
+        });
         setIsSpeaking(false);
         isSpeakingRef.current = false;
-      };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        isSpeakingRef.current = false;
-      };
-
-      window.speechSynthesis.speak(utterance);
+      } else {
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        if (jervisVoice) {
+          utterance.voice = jervisVoice;
+        }
+        utterance.pitch = 0.95; // Slightly lower pitch for classy tone
+        utterance.rate = 1.05;  // Classy butler speed
+  
+        utterance.onstart = () => {
+          setIsSpeaking(true);
+          isSpeakingRef.current = true;
+        };
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          isSpeakingRef.current = false;
+        };
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          isSpeakingRef.current = false;
+        };
+  
+        window.speechSynthesis.speak(utterance);
+      }
     } catch (e) {
       setIsSpeaking(false);
       isSpeakingRef.current = false;
@@ -600,7 +621,13 @@ export default function App() {
     }));
 
     if (nextContinuousState) {
-      window.speechSynthesis.cancel(); // Mute currently speaking Jervis
+      if (typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative) {
+        import('@capacitor-community/text-to-speech').then(({ TextToSpeech }) => {
+          TextToSpeech.stop().catch(() => {});
+        });
+      } else {
+        window.speechSynthesis.cancel(); // Mute currently speaking Jervis
+      }
       setIsSpeaking(false);
       addLog("Continuous listening engaged. Voice protocols online, Sir.", "success");
     } else {
@@ -1276,10 +1303,21 @@ export default function App() {
 
             {/* Mute Button */}
             <button
-              onClick={() => {
-                setIsMuted(!isMuted);
-                jervisSynth.muted = !isMuted;
+              onClick={async () => {
+                const nextMuted = !isMuted;
+                setIsMuted(nextMuted);
+                jervisSynth.muted = nextMuted;
                 jervisSynth.playBeep(800, "sine", 0.05, 0.03);
+                if (nextMuted) {
+                  const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative;
+                  if (isNative) {
+                    const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
+                    await TextToSpeech.stop().catch(() => {});
+                  } else {
+                    window.speechSynthesis.cancel();
+                  }
+                  setIsSpeaking(false);
+                }
               }}
               className={`p-2.5 rounded-lg border transition-all ${
                 !isMuted
