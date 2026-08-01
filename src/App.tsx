@@ -1512,12 +1512,16 @@ export default function App() {
                       
                       <div className="space-y-1">
                         <div className="flex justify-between p-1 bg-[#050b16] rounded border border-[#14325c]/40 text-[9px]">
-                          <span className="font-semibold text-[#3bc0ff]">"Turn on Flashlight" / "আলো জ্বালো"</span>
-                          <span className="text-emerald-400 font-bold uppercase">Flashlight On</span>
+                          <span className="font-semibold text-[#3bc0ff]">"Open YouTube" / "YouTube খোলো"</span>
+                          <span className="text-emerald-400 font-bold uppercase">Open App</span>
                         </div>
                         <div className="flex justify-between p-1 bg-[#050b16] rounded border border-[#14325c]/40 text-[9px]">
-                          <span className="font-semibold text-[#3bc0ff]">"Turn off Flashlight" / "আলো নিভাও"</span>
-                          <span className="text-amber-500 font-bold uppercase">Flashlight Off</span>
+                          <span className="font-semibold text-[#3bc0ff]">"Close App" / "বন্ধ করো"</span>
+                          <span className="text-amber-500 font-bold uppercase">Exit JARVIS</span>
+                        </div>
+                        <div className="flex justify-between p-1 bg-[#050b16] rounded border border-[#14325c]/40 text-[9px]">
+                          <span className="font-semibold text-[#3bc0ff]">"Turn on Flashlight" / "আলো জ্বালো"</span>
+                          <span className="text-emerald-400 font-bold uppercase">Flash On</span>
                         </div>
                         <div className="flex justify-between p-1 bg-[#050b16] rounded border border-[#14325c]/40 text-[9px]">
                           <span className="font-semibold text-[#3bc0ff]">"Open WhatsApp" / "হোয়াটসঅ্যাপ খোলো"</span>
