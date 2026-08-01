@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { Capacitor } from "@capacitor/core";
 import { SpeechRecognition as CapSpeechRecognition } from "@capacitor-community/speech-recognition";
+import { nativeSpeechAdapter } from "./NativeSpeechAdapter";
 
 import { HardwareTab } from "./components/HardwareTab";
 import { SettingsTab } from "./components/SettingsTab";
@@ -349,15 +350,34 @@ export default function App() {
 
   // Initialize Speech Synthesis and Speech Recognition
   useEffect(() => {
-    // Check speech recognition
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSpeechRecognitionSupported(false);
-      addLog("Local mic speech recognition not natively supported in this browser environment.", "warn");
-    } else {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = true;
+    const initSpeech = async () => {
+      // For WebView/Native environments, ensure we request microphone permission first
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(track => track.stop()); // close immediately after granted
+        }
+      } catch (err) {
+        addLog("Microphone permission was denied or is unavailable.", "warn");
+      }
+
+      // Check speech recognition
+      const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.isNative;
+      const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      
+      let rec: any = null;
+      if (isNative) {
+        rec = nativeSpeechAdapter;
+      } else if (WebSpeechRecognition) {
+        rec = new WebSpeechRecognition();
+      }
+
+      if (!rec) {
+        setSpeechRecognitionSupported(false);
+        addLog("Local mic speech recognition not natively supported in this browser environment.", "warn");
+      } else {
+        rec.continuous = false;
+        rec.interimResults = true;
       
       // Get initial language setting from storage
       let initialLang = "en-US";
@@ -466,9 +486,12 @@ export default function App() {
       setSpeechSynthesisSupported(false);
       addLog("Vocal feedback synthesis not supported in this browser environment.", "warn");
     }
-
+    
     // Play initial start beep
     jervisSynth.playConfirm();
+  };
+
+  initSpeech();
   }, []);
 
   // Sync scroll on logs and chat
